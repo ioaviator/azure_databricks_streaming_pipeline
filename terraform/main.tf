@@ -21,3 +21,15 @@ resource "azurerm_eventhub" "evnt_hub_store" {
   partition_count   = 2
   message_retention = 1
 }
+
+
+resource "azurerm_databricks_workspace" "databricks" {
+  name                = "evnt-bricks"
+  resource_group_name = azurerm_resource_group.event-stream-rg.name
+  location            = azurerm_resource_group.event-stream-rg.location
+  sku                 = "premium"
+
+  tags = {
+    Environment = "Development"
+  }
+}
