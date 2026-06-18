@@ -25,6 +25,13 @@ resource "azurerm_eventhub_namespace" "envt_hub_stream_ns" {
   }
 }
 
+resource "azurerm_eventhub" "evnt_hub_store" {
+  name              = "evnt_hub_store"
+  namespace_id      = azurerm_eventhub_namespace.envt_hub_stream_ns.id
+  partition_count   = 2
+  message_retention = 1
+}
+
 resource "azurerm_eventhub_namespace_authorization_rule" "eventhub_auth_key" {
   name                = "event-hub-auth-key"
   namespace_name      = azurerm_eventhub_namespace.envt_hub_stream_ns.name
@@ -33,13 +40,6 @@ resource "azurerm_eventhub_namespace_authorization_rule" "eventhub_auth_key" {
   listen = true
   send   = true
   manage = true
-}
-
-resource "azurerm_eventhub" "evnt_hub_store" {
-  name              = "evnt_hub_store"
-  namespace_id      = azurerm_eventhub_namespace.envt_hub_stream_ns.id
-  partition_count   = 2
-  message_retention = 1
 }
 
 resource "azurerm_key_vault" "main" {
@@ -61,7 +61,10 @@ resource "azurerm_key_vault" "main" {
     managed_by  = "terraform"
   }
 
-  depends_on = [azurerm_resource_group.event_stream_rg]
+  depends_on = [
+    azurerm_resource_group.event_stream_rg,     
+    azurerm_eventhub_namespace_authorization_rule.eventhub_auth_key
+  ]
 
 }
 
@@ -124,12 +127,7 @@ resource "databricks_cluster" "evnt_stream_cluster" {
   cluster_name            = "event_stream_cluster"
   spark_version           = "17.3.x-scala2.13"
   node_type_id            = "Standard_DC4as_v5"
-  autotermination_minutes = 15
-
-  autoscale {
-    min_workers = 1
-    max_workers = 2
-  }
+  autotermination_minutes = 20
 
   data_security_mode = "DATA_SECURITY_MODE_DEDICATED"
   kind               = "CLASSIC_PREVIEW"
@@ -144,6 +142,31 @@ resource "databricks_cluster" "evnt_stream_cluster" {
   depends_on = [
     time_sleep.wait_for_databricks_workspace
   ]
+}
+
+# Fetch credentials in azure key vault: create secret scope in databricks
+data "azurerm_key_vault" "kv_credentials" {
+  name                = azurerm_key_vault.main.name
+  resource_group_name = azurerm_resource_group.event_stream_rg.name
+}
+
+# Create the Key Vault-backed Secret Scope in Databricks
+resource "databricks_secret_scope" "kv_databricks_scope" {
+  name = "azure-keyvault-databricks-scope"
+
+  keyvault_metadata {
+    resource_id = data.azurerm_key_vault.kv_credentials.id
+    dns_name    = data.azurerm_key_vault.kv_credentials.vault_uri
+  }
+}
+
+# grant databricks permission to key vault
+resource "azurerm_role_assignment" "databricks_kv_secrets_user" {
+  scope                = data.azurerm_key_vault.kv_credentials.id
+  role_definition_name = "Key Vault Secrets User"
+
+  # Azure principal object id
+  principal_id         = "96e76deb-66b5-4440-9d70-f5bc065371f1"
 }
 
 
