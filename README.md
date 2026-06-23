@@ -139,7 +139,7 @@ Open the project directory with your editor of choice (VsCode preferred).  On th
 
 - #### Once confirmed, click on the interrupt icon on the top right in databricks workspace to stop cluster from running
   
-  ### Visualization with Power BI
+  ## Visualization with Power BI
   - #### Click on the the marketplace option, search and select Power BI Desktop. Click on Connect
   ![power bi connector](./img/visuals_power_bi.png)
 
@@ -155,3 +155,9 @@ Open the project directory with your editor of choice (VsCode preferred).  On th
   - #### You can now visualize the weather streams data using Power BI.
   
   ![power bi databricks data connection](./img/power_bi_data_connection_result.png)
+
+  ## Destroy resources
+  - #### Run the command from the terraform directory path
+  ```bash
+    terraform destroy auto-approve
+  ```
