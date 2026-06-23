@@ -159,5 +159,5 @@ Open the project directory with your editor of choice (VsCode preferred).  On th
   ## Destroy resources
   - #### Run the command from the terraform directory path
   ```bash
-    terraform destroy auto-approve
+    terraform destroy -auto-approve
   ```
